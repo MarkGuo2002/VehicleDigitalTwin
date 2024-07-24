@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  vehicle_digital_twin:
+    build: ./VehicleDigitalTwin
+    image: vehicle_digital_twin_image
+    container_name: "VehicleDigitalTwin"
+    stdin_open: true
+    tty: true
+    environment:
+      - MQTT_SERVER_ADDRESS=34.42.180.64
+      - MQTT_SERVER_PORT=1883
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - "./VehicleDigitalTwin/code:/etc/usr/src/app"

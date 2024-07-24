@@ -1,0 +1,88 @@
+version: '3'
+services:
+  mosquitto:
+    build: ./mosquitto
+    ports:
+      - "1883:1883"  
+    volumes:
+      - "./mosquitto/code/mosquitto.conf:/etc/mosquitto/mosquitto.conf"
+
+  message_router:
+    build: ./message_router
+    ports:
+      - "5000:5000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5000
+      - MQTT_SERVER_ADDRESS=mosquitto
+      - MQTT_SERVER_PORT=1883
+      - PYTHONUNBUFFERED=1
+      - VEHICLES_MICROSERVICE_ADDRESS=vehicles_microservice
+      - VEHICLES_MICROSERVICE_PORT=5001
+      - TELEMETRY_MICROSERVICE_ADDRESS=telemetry_microservice
+      - TELEMETRY_MICROSERVICE_PORT=5002
+      - ROUTES_MICROSERVICE_ADDRESS=routes_microservice
+      - ROUTES_MICROSERVICE_PORT=5003
+    volumes:
+      - "./message_router/code:/etc/usr/src/app"
+    depends_on:
+      - mosquitto
+      
+  dbservice:
+    build: ./dbService
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234
+    ports:
+      - "3306:3306"
+  
+  vehicles_microservice:
+    build: ./microservices/vehicles_microservice
+    ports:
+      - "5001:5001"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5001
+      - DB_HOST=dbservice
+      - DB_USER=fic_db_user
+      - DBPASSWORD=1234  
+      - DBDATABASE=fic_data
+    volumes:
+      - "./microservices/vehicles_microservice/code:/etc/usr/src/app"
+    depends_on:
+      - dbservice
+
+  telemetry_microservice:
+    build: ./microservices/telemetry_microservice
+    ports:
+      - "5002:5002"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5002
+      - DB_HOST=dbservice
+      - DB_USER=fic_db_user
+      - DBPASSWORD=1234  
+      - DBDATABASE=fic_data
+    volumes:
+      - "./microservices/telemetry_microservice/code:/etc/usr/src/app"
+    depends_on:
+      - dbservice
+
+  routes_microservice:
+    build: ./microservices/routes_microservice
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5003
+      - DBHOST=dbservice
+      - DBUSER=fic_db_user
+      - DBPASSWORD=1234
+      - DBDATABASE=fic_data
+      - MESSAGE_ROUTER_ADDRESS=message_router
+      - MESSAGE_ROUTER_PORT=5000
+      - VEHICLES_MICROSERVICE_ADDRESS=vehicles_microservice
+      - VEHICLES_MICROSERVICE_PORT=5001
+    ports:
+      - "5003:5003"
+    volumes:
+      - "./microservices/routes_microservice/code:/etc/usr/src/app"
+    depends_on:
+      - dbservice
